@@ -7,10 +7,12 @@ import {
 import { formatCatchDate, formatCatchDetails } from '../../lib/formatCatch'
 import type { MarkAreaGuide } from '../../lib/markAreaGuide'
 import type { CatchWithMark } from '../../hooks/useCatches'
+import { useMarkWeather } from '../../hooks/useMarkWeather'
 import { sharedByLabel } from '../../lib/markOwnerDisplay'
 import type { MarkWithOwner } from '../../types/database'
 import { FishSpeciesBarChart } from './FishSpeciesBarChart'
 import { MarkSpotPhoto } from './MarkSpotPhoto'
+import { MarkWeatherCard } from './MarkWeatherCard'
 
 type MarkDetailPanelProps = {
   mark: MarkWithOwner
@@ -49,6 +51,8 @@ export function MarkDetailPanel({
   const markCatches = getCatchesForMark(catches, mark.id)
   const fishCounts = aggregateFishCounts(markCatches)
   const showPersonalChart = markCatches.length >= 2
+  const { weather, loading: weatherLoading, error: weatherError } =
+    useMarkWeather(mark.latitude, mark.longitude)
 
   return (
     <section
@@ -81,6 +85,16 @@ export function MarkDetailPanel({
           <X className="h-5 w-5" />
         </button>
       </header>
+
+      <div className="shrink-0 px-4 pb-3">
+        <MarkWeatherCard
+          latitude={mark.latitude}
+          longitude={mark.longitude}
+          weather={weather}
+          loading={weatherLoading}
+          error={weatherError}
+        />
+      </div>
 
       {onPhotoChange && (isOwn || mark.photo_url) ? (
         <MarkSpotPhoto

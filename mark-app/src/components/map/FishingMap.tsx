@@ -1,8 +1,8 @@
 import {
   Crosshair,
+  Fish,
   Layers,
   Loader2,
-  MapPinPlus,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -29,7 +29,9 @@ import { useDetailMapLabels } from '../../hooks/useDetailMapLabels'
 import { useSeamarkOverlay } from '../../hooks/useSeamarkOverlay'
 import { fitMapToMarks, flyToMark } from '../../lib/mapBounds'
 import { isOwnMark } from '../../lib/markOwnership'
+import { defaultQuickMarkName } from '../../lib/defaultMarkName'
 import { findMarkAreaGuide } from '../../lib/markAreaGuide'
+import { requestGeolocation } from '../../lib/requestGeolocation'
 import { useEffectiveMapStyle } from '../../hooks/useEffectiveMapStyle'
 import {
   mapStyleAttribution,
@@ -43,6 +45,7 @@ import type { MarkWithOwner } from '../../types/database'
 import { AtlasInfoPopup } from './AtlasInfoPopup'
 import { DraftMarkPin } from './DraftMarkPin'
 import { DropMarkModal } from './DropMarkModal'
+import { MarkQuickChoiceModal } from './MarkQuickChoiceModal'
 import { FishingAtlasMarkers } from './FishingAtlasMarkers'
 import { MapCrosshair } from './MapCrosshair'
 import { MapMarksPanel } from './MapMarksPanel'
@@ -98,10 +101,12 @@ export function FishingMap() {
     null,
   )
   const [dropModalOpen, setDropModalOpen] = useState(false)
+  const [quickChoiceOpen, setQuickChoiceOpen] = useState(false)
   const [draftCoords, setDraftCoords] = useState<Coords | null>(null)
-  const [dropSource, setDropSource] = useState<'center' | 'point'>('center')
   const [saving, setSaving] = useState(false)
+  const [markButtonBusy, setMarkButtonBusy] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [locationHint, setLocationHint] = useState<string | null>(null)
 
   const visibleMarks = filterMarksByTime(marks, timeRange)
 
@@ -109,9 +114,8 @@ export function FishingMap() {
   useDetailMapLabels(mapRef, usesDetailMapLabels(effectiveMapStyle))
   useSeamarkOverlay(mapRef, usesSeamarkOverlay(effectiveMapStyle))
 
-  const openDropAt = useCallback((coords: Coords, source: 'center' | 'point') => {
+  const openDropAt = useCallback((coords: Coords) => {
     setDraftCoords(coords)
-    setDropSource(source)
     setSaveError(null)
     setSelectedMark(null)
     setSelectedAtlas(null)
@@ -120,7 +124,7 @@ export function FishingMap() {
 
   useMapLongPress(mapRef, {
     enabled: isAuthenticated && !dropModalOpen,
-    onLongPress: (coords) => openDropAt(coords, 'point'),
+    onLongPress: (coords) => openDropAt(coords),
   })
 
   const centerOnUser = useCallback((latitude: number, longitude: number) => {
@@ -202,24 +206,7 @@ export function FishingMap() {
     selectMark(mark)
   }, [focusMarkId, marks, marksLoading, selectMark])
 
-  const handleDropAtCrosshair = () => {
-    const map = mapRef.current?.getMap()
-    if (!map) return
-
-    const center = map.getCenter()
-    openDropAt({ latitude: center.lat, longitude: center.lng }, 'center')
-  }
-
-  const handleMapContextMenu = (event: MapMouseEvent) => {
-    if (!isAuthenticated) return
-    event.preventDefault()
-    openDropAt(
-      { latitude: event.lngLat.lat, longitude: event.lngLat.lng },
-      'point',
-    )
-  }
-
-  const handleSaveMark = async (payload: {
+  const saveMarkAtDraft = async (payload: {
     name: string
     description: string
     photoFile: File | null
@@ -251,6 +238,7 @@ export function FishingMap() {
       }
 
       setDropModalOpen(false)
+      setQuickChoiceOpen(false)
       setDraftCoords(null)
       selectMark(withOwner)
       void refetchMarks()
@@ -263,10 +251,73 @@ export function FishingMap() {
     }
   }
 
+  const handleMarkButton = async () => {
+    if (!isAuthenticated) return
+
+    setMarkButtonBusy(true)
+    setSaveError(null)
+    setLocationHint(null)
+    setSelectedMark(null)
+    setSelectedAtlas(null)
+
+    try {
+      let coords: Coords | null = position
+        ? {
+            latitude: position.latitude,
+            longitude: position.longitude,
+          }
+        : null
+
+      if (!coords) {
+        setLocationHint('Finding your location…')
+        coords = await requestGeolocation()
+      }
+
+      centerOnUser(coords.latitude, coords.longitude)
+      setDraftCoords(coords)
+      setQuickChoiceOpen(true)
+      setDropModalOpen(false)
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : 'Could not get your location.',
+      )
+    } finally {
+      setMarkButtonBusy(false)
+      setLocationHint(null)
+    }
+  }
+
+  const handleMarkOnly = () => {
+    void saveMarkAtDraft({
+      name: defaultQuickMarkName(),
+      description: '',
+      photoFile: null,
+    })
+  }
+
+  const handleAddMarkDetails = () => {
+    setQuickChoiceOpen(false)
+    setSaveError(null)
+    setDropModalOpen(true)
+  }
+
+  const closeQuickChoice = () => {
+    if (saving) return
+    setQuickChoiceOpen(false)
+    setDraftCoords(null)
+    setSaveError(null)
+  }
+
+  const handleMapContextMenu = (event: MapMouseEvent) => {
+    if (!isAuthenticated) return
+    event.preventDefault()
+    openDropAt({ latitude: event.lngLat.lat, longitude: event.lngLat.lng })
+  }
+
   const closeDropModal = () => {
     if (saving) return
     setDropModalOpen(false)
-    setDraftCoords(null)
+    if (!quickChoiceOpen) setDraftCoords(null)
     setSaveError(null)
   }
 
@@ -278,9 +329,11 @@ export function FishingMap() {
     [selectedMark],
   )
 
-  const showCrosshair = isAuthenticated && !dropModalOpen && !selectedMark
+  const mapFlowOpen = dropModalOpen || quickChoiceOpen
+  const showCrosshair =
+    isAuthenticated && !mapFlowOpen && !selectedMark && !markButtonBusy
   const showDraftPin =
-    draftCoords && dropSource === 'point' && (dropModalOpen || saving)
+    draftCoords && (mapFlowOpen || saving || markButtonBusy)
 
   return (
     <div className="flex h-full min-h-0 w-full">
@@ -405,9 +458,9 @@ export function FishingMap() {
       <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-col items-center gap-2 px-3">
         <MapTimeFilter value={timeRange} onChange={setTimeRange} />
 
-        {geoLoading ? (
+        {geoLoading || markButtonBusy ? (
           <StatusBanner icon={<Loader2 className="h-4 w-4 animate-spin" />}>
-            Acquiring GPS…
+            {locationHint ?? 'Acquiring GPS…'}
           </StatusBanner>
         ) : null}
         {geoError ? (
@@ -475,17 +528,32 @@ export function FishingMap() {
         ) : null}
       </div>
 
-      {!selectedMark ? (
-      <button
-        type="button"
-        onClick={handleDropAtCrosshair}
-        disabled={!isAuthenticated}
-        className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-1/2 z-10 flex min-h-14 -translate-x-1/2 items-center justify-center gap-2 rounded-full bg-mark-blue px-8 py-3 text-lg font-bold text-mark-950 shadow-xl shadow-mark-blue/30 transition-transform hover:bg-mark-blue-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 lg:bottom-6"
-      >
-        <MapPinPlus className="h-6 w-6" aria-hidden />
-        Mark at crosshair
-      </button>
+      {!selectedMark && !mapFlowOpen ? (
+        <button
+          type="button"
+          onClick={() => void handleMarkButton()}
+          disabled={!isAuthenticated || markButtonBusy}
+          className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-1/2 z-10 flex min-h-14 -translate-x-1/2 items-center justify-center gap-2 rounded-full bg-mark-blue px-10 py-3 text-lg font-bold text-mark-950 shadow-xl shadow-mark-blue/30 transition-transform hover:bg-mark-blue-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 lg:bottom-6"
+        >
+          {markButtonBusy ? (
+            <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+          ) : (
+            <Fish className="h-6 w-6" strokeWidth={2.5} aria-hidden />
+          )}
+          Mark
+        </button>
       ) : null}
+
+      <MarkQuickChoiceModal
+        open={quickChoiceOpen}
+        latitude={draftCoords?.latitude ?? viewState.latitude}
+        longitude={draftCoords?.longitude ?? viewState.longitude}
+        saving={saving}
+        error={saveError}
+        onMarkOnly={handleMarkOnly}
+        onAddDetails={handleAddMarkDetails}
+        onClose={closeQuickChoice}
+      />
 
       <DropMarkModal
         open={dropModalOpen}
@@ -495,7 +563,7 @@ export function FishingMap() {
         saving={saving}
         error={saveError}
         onClose={closeDropModal}
-        onSave={handleSaveMark}
+        onSave={(payload) => void saveMarkAtDraft(payload)}
       />
       </div>
     </div>
