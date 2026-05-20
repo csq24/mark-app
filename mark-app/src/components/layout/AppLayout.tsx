@@ -20,7 +20,7 @@ export function AppLayout() {
         <AuthBanner />
         <main
           id="main-content"
-          className="flex-1 pb-[calc(4.75rem+env(safe-area-inset-bottom))]"
+          className="flex min-h-0 flex-1 flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))]"
         >
           <Outlet />
         </main>
