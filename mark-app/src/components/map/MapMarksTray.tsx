@@ -19,7 +19,7 @@ export function MapMarksTray({
   if (marks.length === 0) return null
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-10 px-3 lg:hidden">
+    <div className="pointer-events-none absolute inset-x-0 bottom-[calc(7.5rem+env(safe-area-inset-bottom))] z-10 px-3 lg:hidden">
       <div
         className="pointer-events-auto mx-auto max-w-lg rounded-2xl border border-mark-700 bg-mark-950/95 p-2 shadow-xl backdrop-blur-md"
         role="list"

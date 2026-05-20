@@ -18,4 +18,10 @@ const clientUrl = isSupabaseConfigured
   : 'https://placeholder.supabase.co'
 const clientKey = isSupabaseConfigured ? supabaseAnonKey : 'placeholder-anon-key'
 
-export const supabase = createClient<Database>(clientUrl, clientKey)
+export const supabase = createClient<Database>(clientUrl, clientKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+})

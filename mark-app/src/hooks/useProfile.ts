@@ -117,6 +117,9 @@ export function useProfile() {
       if (input.share_spots !== undefined) {
         payload.share_spots = input.share_spots
       }
+      if (input.show_friend_spots !== undefined) {
+        payload.show_friend_spots = input.show_friend_spots
+      }
 
       const { data, error: updateError } = await supabase
         .from('profiles')

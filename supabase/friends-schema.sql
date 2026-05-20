@@ -40,7 +40,23 @@ $$;
 revoke all on function public.are_friends(uuid, uuid) from public;
 grant execute on function public.are_friends(uuid, uuid) to authenticated;
 
--- Marks: yours, or a friend who enabled share_spots
+create or replace function public.viewer_shows_friend_spots()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select p.show_friend_spots from public.profiles p where p.id = auth.uid()),
+    true
+  );
+$$;
+
+revoke all on function public.viewer_shows_friend_spots() from public;
+grant execute on function public.viewer_shows_friend_spots() to authenticated;
+
+-- Marks: yours, or a friend who enabled share_spots (when you want to see them)
 drop policy if exists "marks_select_own_or_shared" on public.marks;
 
 create policy "marks_select_own_or_shared"
@@ -52,6 +68,7 @@ create policy "marks_select_own_or_shared"
     or (
       public.user_shares_spots(user_id)
       and public.are_friends((select auth.uid()), user_id)
+      and public.viewer_shows_friend_spots()
     )
   );
 

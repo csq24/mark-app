@@ -1,11 +1,11 @@
 import {
   Crosshair,
-  Fish,
   Layers,
   Loader2,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
+import { MAP_DROP_MARK_EVENT } from './MapMarkFab'
 import Map, {
   Marker,
   NavigationControl,
@@ -69,8 +69,13 @@ type ViewState = {
 
 type Coords = { latitude: number; longitude: number }
 
+function publishMarkFabBusy(busy: boolean) {
+  window.dispatchEvent(
+    new CustomEvent('mark-app:mark-button-busy', { detail: { busy } }),
+  )
+}
+
 export function FishingMap() {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const focusMarkId = searchParams.get('markId')
 
@@ -108,6 +113,10 @@ export function FishingMap() {
   const [markButtonBusy, setMarkButtonBusy] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [locationHint, setLocationHint] = useState<string | null>(null)
+
+  useEffect(() => {
+    publishMarkFabBusy(markButtonBusy)
+  }, [markButtonBusy])
 
   const visibleMarks = filterMarksByTime(marks, timeRange)
 
@@ -252,11 +261,8 @@ export function FishingMap() {
     }
   }
 
-  const handleMarkButton = async () => {
-    if (!isAuthenticated) {
-      navigate('/login')
-      return
-    }
+  const handleMarkButton = useCallback(async () => {
+    if (!isAuthenticated) return
 
     setMarkButtonBusy(true)
     setSaveError(null)
@@ -289,7 +295,17 @@ export function FishingMap() {
       setMarkButtonBusy(false)
       setLocationHint(null)
     }
-  }
+  }, [
+    isAuthenticated,
+    position,
+    centerOnUser,
+  ])
+
+  useEffect(() => {
+    const onDropMark = () => void handleMarkButton()
+    window.addEventListener(MAP_DROP_MARK_EVENT, onDropMark)
+    return () => window.removeEventListener(MAP_DROP_MARK_EVENT, onDropMark)
+  }, [handleMarkButton])
 
   const handleMarkOnly = () => {
     void saveMarkAtDraft({
@@ -531,33 +547,6 @@ export function FishingMap() {
           </button>
         ) : null}
       </div>
-
-      {!selectedMark && !mapFlowOpen ? (
-        <button
-          type="button"
-          onClick={() => void handleMarkButton()}
-          disabled={markButtonBusy}
-          aria-label={
-            isAuthenticated
-              ? 'Drop a mark at your location'
-              : 'Sign in to drop marks'
-          }
-          className={[
-            'absolute left-1/2 z-[60] flex min-h-14 -translate-x-1/2 flex-col items-center justify-center gap-0.5 rounded-full px-10 py-3 text-lg font-bold shadow-xl transition-transform active:scale-[0.98] disabled:cursor-wait disabled:opacity-70',
-            'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]',
-            isAuthenticated
-              ? 'bg-mark-blue text-mark-950 shadow-mark-blue/30 hover:bg-mark-blue-hover'
-              : 'border-2 border-mark-blue bg-mark-950/95 text-mark-blue backdrop-blur-md hover:bg-mark-800',
-          ].join(' ')}
-        >
-          {markButtonBusy ? (
-            <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
-          ) : (
-            <Fish className="h-6 w-6" strokeWidth={2.5} aria-hidden />
-          )}
-          <span>{isAuthenticated ? 'Mark' : 'Sign in to Mark'}</span>
-        </button>
-      ) : null}
 
       <MarkQuickChoiceModal
         open={quickChoiceOpen}

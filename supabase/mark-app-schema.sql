@@ -12,11 +12,15 @@ create table public.profiles (
   updated_at timestamptz not null default now(),
   full_name text,
   boat_name text,
-  share_spots boolean not null default false
+  share_spots boolean not null default false,
+  show_friend_spots boolean not null default true
 );
 
 comment on column public.profiles.share_spots is
   'When true, other signed-in users can view this captain''s marks on the map.';
+
+comment on column public.profiles.show_friend_spots is
+  'When true, this captain sees shared marks from friends on the map.';
 
 comment on table public.profiles is 'Captain profile; one row per auth user.';
 

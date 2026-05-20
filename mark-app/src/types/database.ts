@@ -4,12 +4,13 @@ export type Profile = {
   full_name: string | null
   boat_name: string | null
   share_spots: boolean
+  show_friend_spots: boolean
   username: string
   created_at?: string
 }
 
 export type ProfileUpdate = Partial<
-  Pick<Profile, 'full_name' | 'boat_name' | 'share_spots'>
+  Pick<Profile, 'full_name' | 'boat_name' | 'share_spots' | 'show_friend_spots'>
 >
 
 export type Friend = {

@@ -22,7 +22,7 @@ Use this file so parallel Cursor agents do not duplicate work or conflict.
 | Auth UI (login) | Done | `LoginPage`, `AuthBanner`, sign in/out |
 | New Catch form | Done | `NewCatchForm.tsx` → Supabase + Storage |
 | Log Book (live data) | Done | `useCatches`, photos, refresh, delete catch, pull-to-refresh |
-| Profiles (boat name, share spots) | Done | `SettingsPage`, `useProfile`, `share_spots` toggle; RLS shares marks when on |
+| Profiles (boat name, share spots) | Done | `share_spots` (share yours) + `show_friend_spots` (see friends on map) on Profile |
 | Species encyclopedia | Done | `SpeciesPage`, `fishSpecies.ts`, atlas + log book integration |
 | Forums | Done | `forum_posts` + `forum_replies`, filters, new post, thread replies |
 | Marketplace | Done | Listings, categories, buyer/seller inbox + chat (`marketplace-schema.sql`) |

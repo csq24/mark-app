@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from '../../lib/supabase'
 import { DemoBotsPanel } from './DemoBotsPanel'
 import { FriendsList } from './FriendsList'
 import { ShareSpotsSetting } from './ShareSpotsSetting'
+import { ShowFriendSpotsSetting } from './ShowFriendSpotsSetting'
 
 const inputClassName =
   'w-full min-h-14 rounded-xl border-2 border-ocean-600 bg-ocean-800 px-4 text-xl text-foam placeholder:text-spray/50 focus:border-spray focus:outline-none focus:ring-2 focus:ring-spray/30 disabled:opacity-50'
@@ -130,6 +131,22 @@ export function ProfileSettingsForm() {
             share_spots
               ? 'Spot sharing is on for friends.'
               : 'Spot sharing is off.',
+          )
+          setFormError(null)
+        }}
+      />
+
+      <ShowFriendSpotsSetting
+        enabled={profile?.show_friend_spots ?? true}
+        disabled={!isAuthenticated}
+        saving={saving}
+        onChange={async (show_friend_spots) => {
+          await updateProfile({ show_friend_spots })
+          window.dispatchEvent(new CustomEvent('mark-app:refetch-marks'))
+          setSuccessMessage(
+            show_friend_spots
+              ? 'Friends\' shared spots are visible on your map.'
+              : 'Friends\' shared spots are hidden on your map.',
           )
           setFormError(null)
         }}
