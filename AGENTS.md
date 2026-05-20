@@ -25,6 +25,7 @@ Use this file so parallel Cursor agents do not duplicate work or conflict.
 | Profiles (boat name, share spots) | Done | `SettingsPage`, `useProfile`, `share_spots` toggle; RLS shares marks when on |
 | Species encyclopedia | Done | `SpeciesPage`, `fishSpecies.ts`, atlas + log book integration |
 | Forums | Done | `forum_posts` + `forum_replies`, filters, new post, thread replies |
+| Marketplace | Done | Listings, categories, buyer/seller inbox + chat (`marketplace-schema.sql`) |
 | Deploy / CI | Not started | |
 | `.env` / Supabase keys | Done | Copied from linked Supabase project; login works |
 | Mapbox | N/A | Replaced with MapLibre + OpenFreeMap (no key) |
@@ -64,6 +65,7 @@ Dev server: `cd mark-app && npm run dev` → http://localhost:5173
 | **Agent B** | **Map** — MapLibre + free tiles | Done |
 | **Agent C** | **Log Book** — Delete catch, pull-to-refresh polish | Done |
 | **Agent D** | **Map features** — Edit/delete mark | Open |
+| **Lead** | **Marketplace** — List items, categories, messaging | Done |
 
 ## Suggested next tasks (pick one per agent)
 

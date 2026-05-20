@@ -62,10 +62,10 @@ export function useForumThread(postId: string | undefined) {
     if (replyError) {
       setError(replyError.message)
     } else {
-      setReplies((replyRows as ForumReplyWithAuthor[]) ?? [])
+      setReplies((replyRows as unknown as ForumReplyWithAuthor[]) ?? [])
     }
 
-    setPost(postRow as ForumThread)
+    setPost(postRow as unknown as ForumThread)
     setLoading(false)
   }, [user, postId])
 
@@ -107,11 +107,11 @@ export function useForumThread(postId: string | undefined) {
         throw new Error(insertError.message)
       }
 
-      setReplies((prev) => [...prev, data as ForumReplyWithAuthor])
+      setReplies((prev) => [...prev, data as unknown as ForumReplyWithAuthor])
       setPost((prev) =>
         prev ? { ...prev, updated_at: new Date().toISOString() } : prev,
       )
-      return data as ForumReplyWithAuthor
+      return data as unknown as ForumReplyWithAuthor
     },
     [user, postId],
   )

@@ -6,7 +6,7 @@ export function SettingsPage() {
     <div>
       <PageHeader
         title="Profile"
-        subtitle="Name, boat, and whether to share your spots"
+        subtitle="Name, boat, friends list, and spot sharing"
       />
       <ProfileSettingsForm />
     </div>

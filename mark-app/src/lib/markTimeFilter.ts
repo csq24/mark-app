@@ -19,10 +19,10 @@ const RANGE_MS: Record<Exclude<MarkTimeRange, 'all'>, number> = {
   year: 365 * 24 * 60 * 60 * 1000,
 }
 
-export function filterMarksByTime(
-  marks: Mark[],
+export function filterMarksByTime<T extends Mark>(
+  marks: T[],
   range: MarkTimeRange,
-): Mark[] {
+): T[] {
   if (range === 'all') return marks
   const cutoff = Date.now() - RANGE_MS[range]
   return marks.filter((mark) => new Date(mark.created_at).getTime() >= cutoff)

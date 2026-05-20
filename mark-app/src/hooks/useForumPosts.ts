@@ -40,7 +40,7 @@ export function useForumPosts() {
       return
     }
 
-    const rows = (data ?? []) as ForumPostWithMeta[]
+    const rows = (data ?? []) as unknown as ForumPostWithMeta[]
     const postIds = rows.map((p) => p.id)
 
     let replyCounts: Record<string, number> = {}
@@ -99,7 +99,10 @@ export function useForumPosts() {
         throw new Error(insertError.message)
       }
 
-      const withMeta = { ...(data as ForumPostWithMeta), reply_count: 0 }
+      const withMeta = {
+        ...(data as unknown as ForumPostWithMeta),
+        reply_count: 0,
+      }
       setPosts((prev) => [withMeta, ...prev])
       return withMeta
     },

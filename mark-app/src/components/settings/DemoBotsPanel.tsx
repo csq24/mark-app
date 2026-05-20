@@ -17,7 +17,7 @@ export function DemoBotsPanel({ disabled = false }: DemoBotsPanelProps) {
     try {
       const result = await seedDemoBots(3)
       setLocalMessage(
-        `Added ${result.bots_created} demo anglers with ${result.marks_created} shared marks.`,
+        `Added ${result.bots_created} demo friends with ${result.marks_created} shared marks.`,
       )
     } catch {
       // error state set in hook
@@ -31,9 +31,10 @@ export function DemoBotsPanel({ disabled = false }: DemoBotsPanelProps) {
         Demo anglers
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-spray">
-        Creates random captain profiles with <strong className="text-foam">Share spots</strong>{' '}
-        turned on and dummy marks around Florida. Use this to test the map with other
-        people&apos;s pins.
+        Creates 3 random demo captains, adds them to your{' '}
+        <strong className="text-foam">Friends</strong> list, turns on their spot
+        sharing, and drops dummy marks around Florida—so you see their teal pins on
+        the map, not yours.
       </p>
 
       <button

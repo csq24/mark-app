@@ -39,7 +39,7 @@ import {
   usesSeamarkOverlay,
   type MapStylePreference,
 } from '../../lib/mapStyles'
-import type { Mark } from '../../types/database'
+import type { MarkWithOwner } from '../../types/database'
 import { AtlasInfoPopup } from './AtlasInfoPopup'
 import { DraftMarkPin } from './DraftMarkPin'
 import { DropMarkModal } from './DropMarkModal'
@@ -81,6 +81,8 @@ export function FishingMap() {
     loading: marksLoading,
     error: marksError,
     createMark,
+    setMarkPhoto,
+    refetch: refetchMarks,
     isAuthenticated,
   } = useMarks()
 
@@ -91,7 +93,7 @@ export function FishingMap() {
     useState<MapStylePreference>('auto')
   const effectiveMapStyle = useEffectiveMapStyle(mapStylePreference, viewState.zoom)
   const [timeRange, setTimeRange] = useState<MarkTimeRange>('week')
-  const [selectedMark, setSelectedMark] = useState<Mark | null>(null)
+  const [selectedMark, setSelectedMark] = useState<MarkWithOwner | null>(null)
   const [selectedAtlas, setSelectedAtlas] = useState<FishingAtlasEntry | null>(
     null,
   )
@@ -141,7 +143,7 @@ export function FishingMap() {
     fitMapToMarks(map, visibleMarks, { userPosition: position })
   }, [visibleMarks, position])
 
-  const selectMark = useCallback((mark: Mark) => {
+  const selectMark = useCallback((mark: MarkWithOwner) => {
     setSelectedMark(mark)
     setSelectedAtlas(null)
     const map = mapRef.current?.getMap()
@@ -220,6 +222,7 @@ export function FishingMap() {
   const handleSaveMark = async (payload: {
     name: string
     description: string
+    photoFile: File | null
   }) => {
     if (!draftCoords) return
 
@@ -232,10 +235,25 @@ export function FishingMap() {
         description: payload.description || null,
         latitude: draftCoords.latitude,
         longitude: draftCoords.longitude,
+        photo_url: null,
       })
+
+      let withOwner = { ...created, profiles: null } as MarkWithOwner
+
+      if (payload.photoFile) {
+        try {
+          withOwner = await setMarkPhoto(created.id, payload.photoFile)
+        } catch {
+          setSaveError(
+            'Mark saved, but the photo did not upload. Open the mark to add a photo.',
+          )
+        }
+      }
+
       setDropModalOpen(false)
       setDraftCoords(null)
-      selectMark(created)
+      selectMark(withOwner)
+      void refetchMarks()
     } catch (err) {
       setSaveError(
         err instanceof Error ? err.message : 'Could not save this mark.',
@@ -375,6 +393,11 @@ export function FishingMap() {
           catches={catches}
           catchesLoading={catchesLoading}
           areaGuide={markAreaGuide}
+          savingMark={saving}
+          onPhotoChange={async (file) => {
+            const updated = await setMarkPhoto(selectedMark.id, file)
+            setSelectedMark(updated)
+          }}
           onClose={() => setSelectedMark(null)}
         />
       ) : null}

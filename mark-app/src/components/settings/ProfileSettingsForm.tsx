@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useProfile } from '../../hooks/useProfile'
 import { isSupabaseConfigured } from '../../lib/supabase'
 import { DemoBotsPanel } from './DemoBotsPanel'
+import { FriendsList } from './FriendsList'
 import { ShareSpotsSetting } from './ShareSpotsSetting'
 
 const inputClassName =
@@ -127,12 +128,14 @@ export function ProfileSettingsForm() {
           await updateProfile({ share_spots })
           setSuccessMessage(
             share_spots
-              ? 'Spot sharing is on.'
+              ? 'Spot sharing is on for friends.'
               : 'Spot sharing is off.',
           )
           setFormError(null)
         }}
       />
+
+      <FriendsList disabled={!isAuthenticated || saving} />
 
       <DemoBotsPanel disabled={!isAuthenticated || saving} />
 

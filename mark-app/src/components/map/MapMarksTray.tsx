@@ -1,12 +1,13 @@
 import { MapPin } from 'lucide-react'
 import { isOwnMark } from '../../lib/markOwnership'
-import type { Mark } from '../../types/database'
+import { displayMarkOwner } from '../../lib/markOwnerDisplay'
+import type { MarkWithOwner } from '../../types/database'
 
 type MapMarksTrayProps = {
-  marks: Mark[]
+  marks: MarkWithOwner[]
   currentUserId?: string
   selectedMarkId: string | null
-  onSelect: (mark: Mark) => void
+  onSelect: (mark: MarkWithOwner) => void
 }
 
 export function MapMarksTray({
@@ -45,9 +46,13 @@ export function MapMarksTray({
                 ].join(' ')}
               >
                 <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="max-w-[8rem] truncate">
+                <span className="max-w-[10rem] truncate">
                   {mark.name}
-                  {!own ? ' · shared' : ''}
+                  {!own ? (
+                    <span className="block truncate text-[10px] font-normal text-sky-300/90">
+                      {displayMarkOwner(mark.profiles)}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             )

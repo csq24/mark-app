@@ -4,13 +4,88 @@ export type Profile = {
   full_name: string | null
   boat_name: string | null
   share_spots: boolean
-  username?: string | null
+  username: string
   created_at?: string
 }
 
 export type ProfileUpdate = Partial<
   Pick<Profile, 'full_name' | 'boat_name' | 'share_spots'>
 >
+
+export type Friend = {
+  id: string
+  user_id: string
+  friend_id: string
+  created_at: string
+  source: string
+}
+
+export type MarketplaceCategory =
+  | 'rods_reels'
+  | 'tackle'
+  | 'electronics'
+  | 'engines'
+  | 'boat_gear'
+  | 'clothing'
+  | 'services'
+  | 'other'
+
+export type MarketplaceCondition = 'new' | 'like_new' | 'good' | 'fair'
+
+export type MarketplaceListingStatus = 'active' | 'sold' | 'removed'
+
+export type MarketplaceListing = {
+  id: string
+  user_id: string
+  category: MarketplaceCategory
+  title: string
+  description: string
+  price_cents: number
+  condition: MarketplaceCondition
+  photo_url: string | null
+  status: MarketplaceListingStatus
+  created_at: string
+  updated_at: string
+}
+
+export type MarketplaceListingInsert = {
+  user_id: string
+  category: MarketplaceCategory
+  title: string
+  description: string
+  price_cents: number
+  condition: MarketplaceCondition
+  photo_url?: string | null
+}
+
+export type MarketplaceConversation = {
+  id: string
+  listing_id: string
+  buyer_id: string
+  seller_id: string
+  created_at: string
+  updated_at: string
+}
+
+export type MarketplaceMessage = {
+  id: string
+  conversation_id: string
+  sender_id: string
+  body: string
+  created_at: string
+}
+
+export type MarketplaceMessageInsert = {
+  conversation_id: string
+  sender_id: string
+  body: string
+}
+
+export type MarketplaceAuthor = {
+  full_name: string | null
+  boat_name: string | null
+  username: string
+}
 
 export type Mark = {
   id: string
@@ -19,6 +94,7 @@ export type Mark = {
   latitude: number
   longitude: number
   description: string | null
+  photo_url: string | null
   created_at: string
 }
 
@@ -27,7 +103,18 @@ export type MarkRow = Pick<Mark, 'id' | 'name'>
 export type MarkInsert = Pick<
   Mark,
   'name' | 'latitude' | 'longitude' | 'description'
+> & {
+  photo_url?: string | null
+}
+
+export type MarkOwnerProfile = Pick<
+  Profile,
+  'full_name' | 'boat_name' | 'username'
 >
+
+export type MarkWithOwner = Mark & {
+  profiles: MarkOwnerProfile | null
+}
 
 export type Catch = {
   id: string
@@ -99,8 +186,8 @@ export type Database = {
     Tables: {
       profiles: {
         Row: Profile
-        Insert: Pick<Profile, 'id'> & Partial<ProfileUpdate>
-        Update: Partial<ProfileUpdate>
+        Insert: Pick<Profile, 'id'> & Partial<ProfileUpdate> & { username?: string }
+        Update: Partial<ProfileUpdate> & { username?: string }
         Relationships: []
       }
       marks: {
@@ -127,9 +214,37 @@ export type Database = {
         Update: Partial<Pick<ForumReplyInsert, 'body'>>
         Relationships: []
       }
+      friends: {
+        Row: Friend
+        Insert: Pick<Friend, 'user_id' | 'friend_id'> & { source?: string }
+        Update: Partial<Pick<Friend, 'source'>>
+        Relationships: []
+      }
+      marketplace_listings: {
+        Row: MarketplaceListing
+        Insert: MarketplaceListingInsert
+        Update: Partial<MarketplaceListingInsert & { status?: MarketplaceListingStatus }>
+        Relationships: []
+      }
+      marketplace_conversations: {
+        Row: MarketplaceConversation
+        Insert: Pick<MarketplaceConversation, 'listing_id' | 'buyer_id' | 'seller_id'>
+        Update: never
+        Relationships: []
+      }
+      marketplace_messages: {
+        Row: MarketplaceMessage
+        Insert: MarketplaceMessageInsert
+        Update: never
+        Relationships: []
+      }
     }
     Views: EmptyRecord
     Functions: {
+      start_marketplace_conversation: {
+        Args: { p_listing_id: string }
+        Returns: string
+      }
       seed_demo_bots: {
         Args: { bot_count?: number }
         Returns: {

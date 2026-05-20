@@ -22,9 +22,12 @@ Fishing log and map app: save marks on the map, log catches, browse species, for
    - In the SQL Editor, run (in order):
      - `supabase/mark-app-schema.sql`
      - `supabase/storage-catch-photos.sql` (optional, for catch photos)
+     - `supabase/marks-photo-url.sql`
+     - `supabase/storage-mark-photos.sql` (spot photos)
      - `supabase/forums-schema.sql`
      - `supabase/profiles-share-spots.sql`
-     - `supabase/seed-demo-bots.sql` (optional, demo anglers on Profile)
+     - `supabase/friends-schema.sql`
+     - `supabase/seed-demo-bots.sql` (optional, demo friends on Profile)
 
 3. **Environment**
 
@@ -49,8 +52,8 @@ Fishing log and map app: save marks on the map, log catches, browse species, for
 - Log book and new catch flow with photos
 - Species encyclopedia
 - Forums
-- Profile: name, boat, **share spots** toggle
-- Demo bots (Profile → Add demo bots) for testing shared marks
+- Profile: name, boat, **friends list**, **share spots** (friends only)
+- Demo bots (Profile → Add demo bots) add friends + random shared marks for testing
 
 ## Agent coordination
 

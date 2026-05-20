@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { usernameFromEmail } from '../lib/profileUsername'
 import { supabase } from '../lib/supabase'
 import type { Profile, ProfileUpdate } from '../types/database'
 import { useAuth } from './useAuth'
@@ -67,7 +68,10 @@ export function useProfile() {
       } else if (!data) {
         const { data: created, error: insertError } = await supabase
           .from('profiles')
-          .insert({ id: user.id })
+          .insert({
+            id: user.id,
+            username: usernameFromEmail(user.email, user.id),
+          })
           .select()
           .single()
 

@@ -34,7 +34,7 @@ export function useCatches() {
       setError(fetchError.message)
       setCatches([])
     } else {
-      setCatches((data as CatchWithMark[]) ?? [])
+      setCatches((data as unknown as CatchWithMark[]) ?? [])
     }
 
     setLoading(false)

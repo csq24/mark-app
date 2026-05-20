@@ -30,6 +30,7 @@ create table public.marks (
   latitude double precision not null,
   longitude double precision not null,
   description text,
+  photo_url text,
   created_at timestamptz not null default now(),
   constraint marks_latitude_range check (latitude >= -90 and latitude <= 90),
   constraint marks_longitude_range check (longitude >= -180 and longitude <= 180)

@@ -36,8 +36,9 @@ export function ShareSpotsSetting({
             Share spots
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-spray">
-            When on, other signed-in anglers can see your mark locations on the
-            map. Your catch log and photos stay private. Default is off.
+            When on, anglers on your <strong className="text-foam">Friends</strong>{' '}
+            list can see your mark locations on the map. Catches and photos stay
+            private. Default is off.
           </p>
         </div>
 
@@ -74,7 +75,7 @@ export function ShareSpotsSetting({
 
       <p className="mt-3 text-xs font-medium text-spray/80">
         {enabled
-          ? 'Sharing on — your marks are visible to the community.'
+          ? 'Sharing on — friends can see your marks on the map.'
           : 'Sharing off — only you can see your marks.'}
       </p>
 

@@ -83,6 +83,27 @@ $$;
 revoke all on function public.create_demo_auth_user(text) from public;
 grant execute on function public.create_demo_auth_user(text) to service_role;
 
+create or replace function public.make_profile_username(base text, user_id uuid)
+returns text
+language sql
+immutable
+as $$
+  select left(
+    coalesce(
+      nullif(
+        regexp_replace(lower(trim(coalesce(base, ''))), '[^a-z0-9]+', '_', 'g'),
+        ''
+      ),
+      'angler'
+    )
+    || '_'
+    || left(replace(user_id::text, '-', ''), 8),
+    40
+  );
+$$;
+
+grant execute on function public.make_profile_username(text, uuid) to authenticated, service_role;
+
 create or replace function public.seed_demo_bots(bot_count int default 3)
 returns jsonb
 language plpgsql
@@ -115,6 +136,7 @@ declare
   created_bots jsonb := '[]'::jsonb;
   marks_per_bot int;
   j int;
+  bot_username text;
   base_lat double precision := 27.95;
   base_lon double precision := -82.45;
 begin
@@ -151,14 +173,24 @@ begin
       || ' '
       || boat_words[1 + floor(random() * array_length(boat_words, 1))::int];
 
-    insert into public.profiles (id, full_name, boat_name, share_spots)
-    values (bot_id, captain_name, vessel, true)
+    bot_username := public.make_profile_username(
+      split_part(bot_email, '@', 1),
+      bot_id
+    );
+
+    insert into public.profiles (id, username, full_name, boat_name, share_spots)
+    values (bot_id, bot_username, captain_name, vessel, true)
     on conflict (id) do update
       set
+        username = coalesce(public.profiles.username, excluded.username),
         full_name = excluded.full_name,
         boat_name = excluded.boat_name,
         share_spots = true,
         updated_at = now();
+
+    insert into public.friends (user_id, friend_id, source)
+    values (caller, bot_id, 'demo')
+    on conflict (user_id, friend_id) do update set source = 'demo';
 
     marks_per_bot := 2 + floor(random() * 3)::int;
 

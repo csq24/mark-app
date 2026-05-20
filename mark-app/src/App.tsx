@@ -5,6 +5,9 @@ import { ForumsPage } from './pages/ForumsPage'
 import { LogBookPage } from './pages/LogBookPage'
 import { LoginPage } from './pages/LoginPage'
 import { MapPage } from './pages/MapPage'
+import { MarketplaceChatPage } from './pages/MarketplaceChatPage'
+import { MarketplaceInboxPage } from './pages/MarketplaceInboxPage'
+import { MarketplaceListingPage } from './pages/MarketplaceListingPage'
 import { MarketplacePage } from './pages/MarketplacePage'
 import { NewCatchPage } from './pages/NewCatchPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -19,6 +22,12 @@ export default function App() {
         <Route path="map" element={<MapPage />} />
         <Route path="species" element={<SpeciesPage />} />
         <Route path="marketplace" element={<MarketplacePage />} />
+        <Route path="marketplace/inbox" element={<MarketplaceInboxPage />} />
+        <Route
+          path="marketplace/inbox/:conversationId"
+          element={<MarketplaceChatPage />}
+        />
+        <Route path="marketplace/:listingId" element={<MarketplaceListingPage />} />
         <Route path="forums" element={<ForumsPage />} />
         <Route path="forums/:postId" element={<ForumThreadPage />} />
         <Route path="logbook" element={<LogBookPage />} />

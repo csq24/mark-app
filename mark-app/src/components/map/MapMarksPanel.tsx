@@ -1,12 +1,13 @@
 import { Fish, MapPin } from 'lucide-react'
 import { isOwnMark } from '../../lib/markOwnership'
-import type { Mark } from '../../types/database'
+import { displayMarkOwner } from '../../lib/markOwnerDisplay'
+import type { MarkWithOwner } from '../../types/database'
 
 type MapMarksPanelProps = {
-  marks: Mark[]
+  marks: MarkWithOwner[]
   currentUserId?: string
   selectedMarkId: string | null
-  onSelect: (mark: Mark) => void
+  onSelect: (mark: MarkWithOwner) => void
   loading?: boolean
 }
 
@@ -70,12 +71,12 @@ export function MapMarksPanel({
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-foam">
                       {mark.name}
-                      {!own ? (
-                        <span className="ml-1.5 text-[10px] font-bold uppercase text-sky-400">
-                          Shared
-                        </span>
-                      ) : null}
                     </span>
+                    {!own ? (
+                      <span className="mt-0.5 block truncate text-xs text-sky-400">
+                        {displayMarkOwner(mark.profiles)}
+                      </span>
+                    ) : null}
                     <span className="mt-0.5 block font-mono text-[10px] text-spray/60">
                       {mark.latitude.toFixed(4)}, {mark.longitude.toFixed(4)}
                     </span>

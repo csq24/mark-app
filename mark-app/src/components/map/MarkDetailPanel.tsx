@@ -7,15 +7,19 @@ import {
 import { formatCatchDate, formatCatchDetails } from '../../lib/formatCatch'
 import type { MarkAreaGuide } from '../../lib/markAreaGuide'
 import type { CatchWithMark } from '../../hooks/useCatches'
-import type { Mark } from '../../types/database'
+import { sharedByLabel } from '../../lib/markOwnerDisplay'
+import type { MarkWithOwner } from '../../types/database'
 import { FishSpeciesBarChart } from './FishSpeciesBarChart'
+import { MarkSpotPhoto } from './MarkSpotPhoto'
 
 type MarkDetailPanelProps = {
-  mark: Mark
+  mark: MarkWithOwner
   isOwn: boolean
   catches: CatchWithMark[]
   catchesLoading: boolean
   areaGuide: MarkAreaGuide
+  savingMark?: boolean
+  onPhotoChange?: (file: File | null) => Promise<void>
   onClose: () => void
 }
 
@@ -38,6 +42,8 @@ export function MarkDetailPanel({
   catches,
   catchesLoading,
   areaGuide,
+  savingMark = false,
+  onPhotoChange,
   onClose,
 }: MarkDetailPanelProps) {
   const markCatches = getCatchesForMark(catches, mark.id)
@@ -56,8 +62,12 @@ export function MarkDetailPanel({
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-lg font-bold text-foam">{mark.name}</h2>
           {!isOwn ? (
-            <p className="text-xs font-semibold text-sky-400">Shared spot</p>
-          ) : null}
+            <p className="text-xs font-semibold text-sky-400">
+              {sharedByLabel(mark.profiles)}
+            </p>
+          ) : (
+            <p className="text-xs text-spray/70">Your mark</p>
+          )}
           <p className="font-mono text-[10px] text-spray/60">
             {mark.latitude.toFixed(4)}, {mark.longitude.toFixed(4)}
           </p>
@@ -71,6 +81,15 @@ export function MarkDetailPanel({
           <X className="h-5 w-5" />
         </button>
       </header>
+
+      {onPhotoChange && (isOwn || mark.photo_url) ? (
+        <MarkSpotPhoto
+          mark={mark}
+          editable={isOwn}
+          saving={savingMark}
+          onPhotoChange={onPhotoChange}
+        />
+      ) : null}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-mark-700 overflow-y-auto md:grid-cols-2 md:divide-x md:divide-y-0">
         {/* Personal — your catches at this mark */}

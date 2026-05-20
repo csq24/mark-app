@@ -1,5 +1,8 @@
-import type { Mark } from '../types/database'
+import type { Mark, MarkWithOwner } from '../types/database'
 
-export function isOwnMark(mark: Mark, userId: string | undefined): boolean {
+export function isOwnMark(
+  mark: Mark | MarkWithOwner,
+  userId: string | undefined,
+): boolean {
   return Boolean(userId && mark.user_id === userId)
 }

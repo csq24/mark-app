@@ -1,5 +1,6 @@
 import { Loader2, MapPin, X } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
+import { PhotoPicker } from '../shared/PhotoPicker'
 
 type DropMarkModalProps = {
   open: boolean
@@ -9,7 +10,11 @@ type DropMarkModalProps = {
   saving: boolean
   error: string | null
   onClose: () => void
-  onSave: (payload: { name: string; description: string }) => void
+  onSave: (payload: {
+    name: string
+    description: string
+    photoFile: File | null
+  }) => void
 }
 
 export function DropMarkModal({
@@ -50,11 +55,17 @@ function DropMarkModalForm({
   const titleId = useId()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
     if (!name.trim() || saving) return
-    onSave({ name: name.trim(), description: description.trim() })
+    onSave({
+      name: name.trim(),
+      description: description.trim(),
+      photoFile,
+    })
   }
 
   return (
@@ -124,6 +135,15 @@ function DropMarkModalForm({
               className="w-full resize-none rounded-xl border-2 border-ocean-600 bg-ocean-950 px-4 py-3 text-base text-foam placeholder:text-spray/50 focus:border-ocean-500 focus:outline-none disabled:opacity-60"
             />
           </label>
+
+          <PhotoPicker
+            disabled={saving}
+            previewUrl={photoPreview}
+            onPreviewChange={(preview, file) => {
+              setPhotoPreview(preview)
+              setPhotoFile(file)
+            }}
+          />
 
           {error ? (
             <p className="rounded-lg bg-red-950/80 px-3 py-2 text-sm text-red-200">

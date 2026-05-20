@@ -42,6 +42,7 @@ export function useSeedDemoBots() {
     const result = data as SeedDemoBotsResult
     setLastResult(result)
     window.dispatchEvent(new CustomEvent('mark-app:refetch-marks'))
+    window.dispatchEvent(new CustomEvent('mark-app:refetch-friends'))
     return result
   }, [])
 
