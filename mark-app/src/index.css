@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Reference-inspired Mark palette */
+  --color-mark-950: #0a0e14;
+  --color-mark-900: #0f1419;
+  --color-mark-800: #151c24;
+  --color-mark-700: #1e2836;
+  --color-mark-600: #2a3544;
+  --color-mark-blue: #00a8ff;
+  --color-mark-blue-hover: #33bbff;
+  --color-mark-blue-dim: #0088cc;
+
+  /* Legacy ocean tokens → aligned with Mark blue theme */
+  --color-ocean-950: #0a0e14;
+  --color-ocean-900: #0f1419;
+  --color-ocean-800: #151c24;
+  --color-ocean-700: #1e2836;
+  --color-ocean-600: #2a3544;
+  --color-ocean-500: #00a8ff;
+  --color-foam: #f0f9ff;
+  --color-spray: #94a3b8;
+  --color-action: #00a8ff;
+  --color-action-hover: #33bbff;
+  --color-action-text: #0a0e14;
+  --color-catch: #00a8ff;
+  --color-catch-hover: #33bbff;
+  --color-catch-text: #0a0e14;
+
+  --font-sans: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    @apply h-full antialiased;
+  }
+
+  body {
+    @apply m-0 min-h-full bg-mark-950 font-sans text-foam;
+  }
+
+  #root {
+    @apply min-h-dvh;
+  }
+}
+
+.maplibregl-popup.mark-popup .maplibregl-popup-content {
+  padding: 0.75rem 0.875rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-mark-700);
+  background: var(--color-mark-900);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.5);
+}
+
+.maplibregl-popup.mark-popup .maplibregl-popup-close-button {
+  display: none;
+}
+
+.maplibregl-popup.mark-popup .maplibregl-popup-tip {
+  border-top-color: var(--color-mark-900);
+}
+
+.maplibregl-ctrl-group {
+  background: rgb(15 20 25 / 0.92) !important;
+  border: 1px solid var(--color-mark-700) !important;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+.maplibregl-ctrl-group button {
+  filter: invert(1) hue-rotate(175deg) brightness(1.15);
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgb(10 14 20 / 0.8) !important;
+  color: var(--color-spray) !important;
+  font-size: 10px;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--color-mark-blue) !important;
+}

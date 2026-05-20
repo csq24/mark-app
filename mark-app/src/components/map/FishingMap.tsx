@@ -1,0 +1,505 @@
+import {
+  Crosshair,
+  Layers,
+  Loader2,
+  MapPinPlus,
+} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import Map, {
+  Marker,
+  NavigationControl,
+  Popup,
+  type MapMouseEvent,
+  type MapRef,
+} from 'react-map-gl/maplibre'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import type { FishingAtlasEntry } from '../../data/fishingAtlas'
+import { useAuth } from '../../hooks/useAuth'
+import { useCatches } from '../../hooks/useCatches'
+import { useGeolocation } from '../../hooks/useGeolocation'
+import { useMapLongPress } from '../../hooks/useMapLongPress'
+import { useMarks } from '../../hooks/useMarks'
+import {
+  filterMarksByTime,
+  type MarkTimeRange,
+} from '../../lib/markTimeFilter'
+import { useAquaticMapTheme } from '../../hooks/useAquaticMapTheme'
+import { useDetailMapLabels } from '../../hooks/useDetailMapLabels'
+import { useSeamarkOverlay } from '../../hooks/useSeamarkOverlay'
+import { fitMapToMarks, flyToMark } from '../../lib/mapBounds'
+import { isOwnMark } from '../../lib/markOwnership'
+import { findMarkAreaGuide } from '../../lib/markAreaGuide'
+import { useEffectiveMapStyle } from '../../hooks/useEffectiveMapStyle'
+import {
+  mapStyleAttribution,
+  resolveMapStyle,
+  usesAquaticTheme,
+  usesDetailMapLabels,
+  usesSeamarkOverlay,
+  type MapStylePreference,
+} from '../../lib/mapStyles'
+import type { Mark } from '../../types/database'
+import { AtlasInfoPopup } from './AtlasInfoPopup'
+import { DraftMarkPin } from './DraftMarkPin'
+import { DropMarkModal } from './DropMarkModal'
+import { FishingAtlasMarkers } from './FishingAtlasMarkers'
+import { MapCrosshair } from './MapCrosshair'
+import { MapMarksPanel } from './MapMarksPanel'
+import { MapMarksTray } from './MapMarksTray'
+import { MapStyleSelect } from './MapStyleSelect'
+import { MapTimeFilter } from './MapTimeFilter'
+import { MarkMarker } from './MarkMarker'
+import { MarkDetailPanel } from './MarkDetailPanel'
+
+const DEFAULT_VIEW = {
+  longitude: -82.45,
+  latitude: 27.95,
+  zoom: 9,
+}
+
+type ViewState = {
+  longitude: number
+  latitude: number
+  zoom: number
+}
+
+type Coords = { latitude: number; longitude: number }
+
+export function FishingMap() {
+  const [searchParams] = useSearchParams()
+  const focusMarkId = searchParams.get('markId')
+
+  const mapRef = useRef<MapRef>(null)
+  const hasSetInitialView = useRef(false)
+  const hasFocusedUrlMark = useRef(false)
+
+  const { user } = useAuth()
+  const { position, error: geoError, loading: geoLoading } = useGeolocation()
+  const {
+    marks,
+    loading: marksLoading,
+    error: marksError,
+    createMark,
+    isAuthenticated,
+  } = useMarks()
+
+  const { catches, loading: catchesLoading } = useCatches()
+
+  const [viewState, setViewState] = useState<ViewState>(DEFAULT_VIEW)
+  const [mapStylePreference, setMapStylePreference] =
+    useState<MapStylePreference>('auto')
+  const effectiveMapStyle = useEffectiveMapStyle(mapStylePreference, viewState.zoom)
+  const [timeRange, setTimeRange] = useState<MarkTimeRange>('week')
+  const [selectedMark, setSelectedMark] = useState<Mark | null>(null)
+  const [selectedAtlas, setSelectedAtlas] = useState<FishingAtlasEntry | null>(
+    null,
+  )
+  const [dropModalOpen, setDropModalOpen] = useState(false)
+  const [draftCoords, setDraftCoords] = useState<Coords | null>(null)
+  const [dropSource, setDropSource] = useState<'center' | 'point'>('center')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const visibleMarks = filterMarksByTime(marks, timeRange)
+
+  useAquaticMapTheme(mapRef, usesAquaticTheme(effectiveMapStyle))
+  useDetailMapLabels(mapRef, usesDetailMapLabels(effectiveMapStyle))
+  useSeamarkOverlay(mapRef, usesSeamarkOverlay(effectiveMapStyle))
+
+  const openDropAt = useCallback((coords: Coords, source: 'center' | 'point') => {
+    setDraftCoords(coords)
+    setDropSource(source)
+    setSaveError(null)
+    setSelectedMark(null)
+    setSelectedAtlas(null)
+    setDropModalOpen(true)
+  }, [])
+
+  useMapLongPress(mapRef, {
+    enabled: isAuthenticated && !dropModalOpen,
+    onLongPress: (coords) => openDropAt(coords, 'point'),
+  })
+
+  const centerOnUser = useCallback((latitude: number, longitude: number) => {
+    const map = mapRef.current?.getMap()
+    if (map) {
+      map.flyTo({ center: [longitude, latitude], zoom: 13, duration: 1200 })
+    } else {
+      setViewState((prev) => ({
+        ...prev,
+        latitude,
+        longitude,
+        zoom: 13,
+      }))
+    }
+  }, [])
+
+  const fitAllMarks = useCallback(() => {
+    const map = mapRef.current?.getMap()
+    if (!map || visibleMarks.length === 0) return
+    fitMapToMarks(map, visibleMarks, { userPosition: position })
+  }, [visibleMarks, position])
+
+  const selectMark = useCallback((mark: Mark) => {
+    setSelectedMark(mark)
+    setSelectedAtlas(null)
+    const map = mapRef.current?.getMap()
+    if (map) flyToMark(map, mark)
+  }, [])
+
+  const selectAtlas = useCallback((entry: FishingAtlasEntry) => {
+    setSelectedAtlas(entry)
+    setSelectedMark(null)
+    const map = mapRef.current?.getMap()
+    if (map) {
+      const zoom =
+        entry.kind === 'country' ? 5 : entry.kind === 'coast' ? 9.5 : 7.5
+      map.flyTo({
+        center: [entry.longitude, entry.latitude],
+        zoom,
+        duration: 1200,
+      })
+    }
+  }, [])
+
+  const clearMapSelection = useCallback(() => {
+    setSelectedMark(null)
+    setSelectedAtlas(null)
+  }, [])
+
+  const showAtlas = viewState.zoom < 11.5
+
+  const applyInitialView = useCallback(() => {
+    if (marksLoading || !isAuthenticated || hasSetInitialView.current) return
+
+    const map = mapRef.current?.getMap()
+    if (!map) return
+
+    if (visibleMarks.length > 0) {
+      hasSetInitialView.current = true
+      fitMapToMarks(map, visibleMarks, { userPosition: position })
+      return
+    }
+
+    if (position) {
+      hasSetInitialView.current = true
+      centerOnUser(position.latitude, position.longitude)
+    }
+  }, [visibleMarks, marksLoading, isAuthenticated, position, centerOnUser])
+
+  useEffect(() => {
+    applyInitialView()
+  }, [applyInitialView])
+
+  useEffect(() => {
+    if (!focusMarkId || marksLoading || hasFocusedUrlMark.current) return
+    const mark = marks.find((m) => m.id === focusMarkId)
+    if (!mark) return
+    hasFocusedUrlMark.current = true
+    selectMark(mark)
+  }, [focusMarkId, marks, marksLoading, selectMark])
+
+  const handleDropAtCrosshair = () => {
+    const map = mapRef.current?.getMap()
+    if (!map) return
+
+    const center = map.getCenter()
+    openDropAt({ latitude: center.lat, longitude: center.lng }, 'center')
+  }
+
+  const handleMapContextMenu = (event: MapMouseEvent) => {
+    if (!isAuthenticated) return
+    event.preventDefault()
+    openDropAt(
+      { latitude: event.lngLat.lat, longitude: event.lngLat.lng },
+      'point',
+    )
+  }
+
+  const handleSaveMark = async (payload: {
+    name: string
+    description: string
+  }) => {
+    if (!draftCoords) return
+
+    setSaving(true)
+    setSaveError(null)
+
+    try {
+      const created = await createMark({
+        name: payload.name,
+        description: payload.description || null,
+        latitude: draftCoords.latitude,
+        longitude: draftCoords.longitude,
+      })
+      setDropModalOpen(false)
+      setDraftCoords(null)
+      selectMark(created)
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : 'Could not save this mark.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const closeDropModal = () => {
+    if (saving) return
+    setDropModalOpen(false)
+    setDraftCoords(null)
+    setSaveError(null)
+  }
+
+  const markAreaGuide = useMemo(
+    () =>
+      selectedMark
+        ? findMarkAreaGuide(selectedMark.latitude, selectedMark.longitude)
+        : null,
+    [selectedMark],
+  )
+
+  const showCrosshair = isAuthenticated && !dropModalOpen && !selectedMark
+  const showDraftPin =
+    draftCoords && dropSource === 'point' && (dropModalOpen || saving)
+
+  return (
+    <div className="flex h-full min-h-0 w-full">
+      <MapMarksPanel
+        marks={visibleMarks}
+        currentUserId={user?.id}
+        selectedMarkId={selectedMark?.id ?? null}
+        onSelect={selectMark}
+        loading={marksLoading && isAuthenticated}
+      />
+
+      <div className="relative min-h-0 min-w-0 flex-1">
+      <Map
+        key={effectiveMapStyle}
+        ref={mapRef}
+        mapStyle={resolveMapStyle(effectiveMapStyle)}
+        {...viewState}
+        onMove={(event) =>
+          setViewState({
+            longitude: event.viewState.longitude,
+            latitude: event.viewState.latitude,
+            zoom: event.viewState.zoom,
+          })
+        }
+        onClick={clearMapSelection}
+        onContextMenu={handleMapContextMenu}
+        onLoad={applyInitialView}
+        style={{ width: '100%', height: '100%' }}
+        attributionControl={false}
+      >
+        <NavigationControl position="top-right" showCompass />
+
+        {showAtlas ? (
+          <FishingAtlasMarkers
+            zoom={viewState.zoom}
+            selectedId={selectedAtlas?.id ?? null}
+            onSelect={selectAtlas}
+          />
+        ) : null}
+
+        {visibleMarks.map((mark) => (
+          <MarkMarker
+            key={mark.id}
+            mark={mark}
+            isOwn={isOwnMark(mark, user?.id)}
+            selected={selectedMark?.id === mark.id}
+            onSelect={selectMark}
+          />
+        ))}
+
+        {showDraftPin ? (
+          <DraftMarkPin
+            latitude={draftCoords.latitude}
+            longitude={draftCoords.longitude}
+          />
+        ) : null}
+
+        {position ? (
+          <Marker
+            longitude={position.longitude}
+            latitude={position.latitude}
+            anchor="center"
+          >
+            <span
+              className="relative flex h-5 w-5 items-center justify-center"
+              aria-label="Your location"
+            >
+              <span className="absolute h-8 w-8 animate-ping rounded-full bg-sky-400/40" />
+              <span className="h-4 w-4 rounded-full border-2 border-white bg-sky-500 shadow-md" />
+            </span>
+          </Marker>
+        ) : null}
+
+        {selectedAtlas ? (
+          <Popup
+            longitude={selectedAtlas.longitude}
+            latitude={selectedAtlas.latitude}
+            anchor="bottom"
+            offset={[0, selectedAtlas.kind === 'country' ? -48 : -44] as [
+              number,
+              number,
+            ]}
+            closeOnClick={false}
+            onClose={() => setSelectedAtlas(null)}
+            className="mark-popup"
+          >
+            <AtlasInfoPopup
+              entry={selectedAtlas}
+              onClose={() => setSelectedAtlas(null)}
+            />
+          </Popup>
+        ) : null}
+      </Map>
+
+      {showCrosshair ? <MapCrosshair /> : null}
+
+      {!selectedMark ? (
+        <MapMarksTray
+          marks={visibleMarks}
+          currentUserId={user?.id}
+          selectedMarkId={null}
+          onSelect={selectMark}
+        />
+      ) : null}
+
+      {selectedMark && markAreaGuide ? (
+        <MarkDetailPanel
+          mark={selectedMark}
+          isOwn={isOwnMark(selectedMark, user?.id)}
+          catches={catches}
+          catchesLoading={catchesLoading}
+          areaGuide={markAreaGuide}
+          onClose={() => setSelectedMark(null)}
+        />
+      ) : null}
+
+      <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-col items-center gap-2 px-3">
+        <MapTimeFilter value={timeRange} onChange={setTimeRange} />
+
+        {geoLoading ? (
+          <StatusBanner icon={<Loader2 className="h-4 w-4 animate-spin" />}>
+            Acquiring GPS…
+          </StatusBanner>
+        ) : null}
+        {geoError ? (
+          <StatusBanner variant="warn">{geoError}</StatusBanner>
+        ) : null}
+        {!isAuthenticated ? (
+          <StatusBanner variant="warn">
+            Sign in to load and save your marks.
+          </StatusBanner>
+        ) : isAuthenticated && marks.length === 0 && viewState.zoom >= 9 ? (
+          <StatusBanner variant="info">
+            Press &amp; hold the map to drop a Mark · right-click on desktop
+          </StatusBanner>
+        ) : showAtlas && !selectedAtlas && viewState.zoom < 9 ? (
+          <StatusBanner variant="info">
+            Zoom in to drop marks · map switches to cities &amp; lakes automatically
+          </StatusBanner>
+        ) : null}
+        {marksError ? (
+          <StatusBanner variant="error">{marksError}</StatusBanner>
+        ) : null}
+        {marksLoading && isAuthenticated ? (
+          <StatusBanner icon={<Loader2 className="h-4 w-4 animate-spin" />}>
+            Loading marks…
+          </StatusBanner>
+        ) : null}
+      </div>
+
+      <div className="pointer-events-none absolute right-3 top-14 z-10">
+        <MapStyleSelect
+          value={mapStylePreference}
+          onChange={setMapStylePreference}
+        />
+      </div>
+
+      <p className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-[14rem] text-[10px] leading-tight text-spray/80">
+        {mapStyleAttribution(effectiveMapStyle)}
+      </p>
+
+      <div className="pointer-events-none absolute right-3 top-28 z-10 flex flex-col gap-2">
+        {visibleMarks.length > 0 ? (
+          <button
+            type="button"
+            onClick={fitAllMarks}
+            className="pointer-events-auto flex h-12 items-center justify-center gap-2 rounded-full border border-mark-700 bg-mark-950/95 px-3 text-sm font-bold text-foam shadow-lg backdrop-blur-md hover:bg-mark-800"
+            aria-label={`Show all ${visibleMarks.length} marks`}
+          >
+            <Layers className="h-5 w-5 shrink-0" aria-hidden />
+            <span className="hidden sm:inline">All marks</span>
+            <span className="rounded-md bg-mark-800 px-1.5 py-0.5 text-xs">
+              {visibleMarks.length}
+            </span>
+          </button>
+        ) : null}
+
+        {position ? (
+          <button
+            type="button"
+            onClick={() => centerOnUser(position.latitude, position.longitude)}
+            className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-mark-700 bg-mark-950/95 text-foam shadow-lg backdrop-blur-md hover:bg-mark-800"
+            aria-label="Center on my location"
+          >
+            <Crosshair className="h-6 w-6" />
+          </button>
+        ) : null}
+      </div>
+
+      {!selectedMark ? (
+      <button
+        type="button"
+        onClick={handleDropAtCrosshair}
+        disabled={!isAuthenticated}
+        className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-1/2 z-10 flex min-h-14 -translate-x-1/2 items-center justify-center gap-2 rounded-full bg-mark-blue px-8 py-3 text-lg font-bold text-mark-950 shadow-xl shadow-mark-blue/30 transition-transform hover:bg-mark-blue-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 lg:bottom-6"
+      >
+        <MapPinPlus className="h-6 w-6" aria-hidden />
+        Mark at crosshair
+      </button>
+      ) : null}
+
+      <DropMarkModal
+        open={dropModalOpen}
+        latitude={draftCoords?.latitude ?? viewState.latitude}
+        longitude={draftCoords?.longitude ?? viewState.longitude}
+        title="New Mark"
+        saving={saving}
+        error={saveError}
+        onClose={closeDropModal}
+        onSave={handleSaveMark}
+      />
+      </div>
+    </div>
+  )
+}
+
+function StatusBanner({
+  children,
+  icon,
+  variant = 'info',
+}: {
+  children: React.ReactNode
+  icon?: React.ReactNode
+  variant?: 'info' | 'warn' | 'error'
+}) {
+  const styles = {
+    info: 'border-mark-700 bg-mark-950/95 text-spray',
+    warn: 'border-mark-blue/40 bg-mark-950/95 text-mark-blue',
+    error: 'border-red-500/40 bg-red-950/90 text-red-100',
+  }
+
+  return (
+    <p
+      className={`pointer-events-auto flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-lg backdrop-blur-md ${styles[variant]}`}
+    >
+      {icon}
+      {children}
+    </p>
+  )
+}

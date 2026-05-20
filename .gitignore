@@ -1,0 +1,24 @@
+# Dependencies & build
+mark-app/node_modules/
+mark-app/dist/
+
+# Secrets — never commit
+mark-app/.env
+.env
+.env.*
+!.env.example
+!mark-app/.env.example
+
+# Logs & OS
+*.log
+.DS_Store
+
+# Editor / tooling
+.cursor/
+.idea/
+.vscode/
+*.tsbuildinfo
+mark-app/node_modules/.tmp/
+
+# Debug / local scripts output
+mark-app/species-images-debug.json
