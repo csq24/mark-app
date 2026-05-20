@@ -2,7 +2,7 @@ import { FishingMap } from '../components/map/FishingMap'
 
 export function MapPage() {
   return (
-    <div className="h-full min-h-0">
+    <div className="min-h-0 flex-1">
       <FishingMap />
     </div>
   )

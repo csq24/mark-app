@@ -99,7 +99,7 @@ export function FishingMap() {
 
   const [viewState, setViewState] = useState<ViewState>(DEFAULT_VIEW)
   const [mapStylePreference, setMapStylePreference] =
-    useState<MapStylePreference>('auto')
+    useState<MapStylePreference>('detail')
   const effectiveMapStyle = useEffectiveMapStyle(mapStylePreference, viewState.zoom)
   const [timeRange, setTimeRange] = useState<MarkTimeRange>('week')
   const [selectedMark, setSelectedMark] = useState<MarkWithOwner | null>(null)
@@ -204,9 +204,25 @@ export function FishingMap() {
     }
   }, [visibleMarks, marksLoading, isAuthenticated, position, centerOnUser])
 
+  const handleMapLoad = useCallback(() => {
+    const map = mapRef.current?.getMap()
+    if (map) {
+      requestAnimationFrame(() => map.resize())
+    }
+    applyInitialView()
+  }, [applyInitialView])
+
   useEffect(() => {
     applyInitialView()
   }, [applyInitialView])
+
+  useEffect(() => {
+    const onResize = () => {
+      mapRef.current?.getMap()?.resize()
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   useEffect(() => {
     if (!focusMarkId || marksLoading || hasFocusedUrlMark.current) return
@@ -356,7 +372,7 @@ export function FishingMap() {
     draftCoords && (mapFlowOpen || saving || markButtonBusy)
 
   return (
-    <div className="flex h-full min-h-0 w-full">
+    <div className="flex h-full min-h-[280px] w-full flex-1">
       <MapMarksPanel
         marks={visibleMarks}
         currentUserId={user?.id}
@@ -367,7 +383,6 @@ export function FishingMap() {
 
       <div className="relative min-h-0 min-w-0 flex-1">
       <Map
-        key={effectiveMapStyle}
         ref={mapRef}
         mapStyle={resolveMapStyle(effectiveMapStyle)}
         {...viewState}
@@ -380,8 +395,8 @@ export function FishingMap() {
         }
         onClick={clearMapSelection}
         onContextMenu={handleMapContextMenu}
-        onLoad={applyInitialView}
-        style={{ width: '100%', height: '100%' }}
+        onLoad={handleMapLoad}
+        style={{ width: '100%', height: '100%', minHeight: '280px' }}
         attributionControl={false}
       >
         <NavigationControl position="top-right" showCompass />
@@ -483,8 +498,8 @@ export function FishingMap() {
             {locationHint ?? 'Acquiring GPS…'}
           </StatusBanner>
         ) : null}
-        {geoError ? (
-          <StatusBanner variant="warn">{geoError}</StatusBanner>
+        {geoError && !geoLoading ? (
+          <StatusBanner variant="info">{geoError}</StatusBanner>
         ) : null}
         {!isAuthenticated ? (
           <StatusBanner variant="warn">

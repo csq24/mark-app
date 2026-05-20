@@ -1,4 +1,5 @@
 import type { GeoPosition } from '../hooks/useGeolocation'
+import { formatGeolocationError } from './geolocationMessage'
 
 const DEFAULT_ERROR =
   'Location unavailable. Enable GPS or move to an open area on deck.'
@@ -18,8 +19,8 @@ export function requestGeolocation(): Promise<GeoPosition> {
           accuracy: geo.coords.accuracy,
         })
       },
-      (err) => reject(new Error(err.message || DEFAULT_ERROR)),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 },
+      (err) => reject(new Error(formatGeolocationError(err.message) || DEFAULT_ERROR)),
+      { enableHighAccuracy: false, maximumAge: 120_000, timeout: 45_000 },
     )
   })
 }

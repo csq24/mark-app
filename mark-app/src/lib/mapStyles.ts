@@ -50,6 +50,10 @@ export const DETAIL_STYLE_URL =
 const ESRI_SATELLITE =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 
+/** Fallback when Esri tiles fail (CORS, timeout, or offline). */
+const CARTO_DARK_RASTER =
+  'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png'
+
 const OPEN_SEAMARK =
   'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png'
 
@@ -63,9 +67,9 @@ export const SATELLITE_STYLE: StyleSpecification = {
   sources: {
     satellite: {
       type: 'raster',
-      tiles: [ESRI_SATELLITE],
+      tiles: [ESRI_SATELLITE, CARTO_DARK_RASTER],
       tileSize: 256,
-      attribution: '© Esri',
+      attribution: '© Esri © CARTO',
       maxzoom: 19,
     },
     seamark: {

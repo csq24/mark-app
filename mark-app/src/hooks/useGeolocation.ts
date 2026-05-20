@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { formatGeolocationError } from '../lib/geolocationMessage'
 
 export type GeoPosition = {
   latitude: number
@@ -11,9 +12,6 @@ type UseGeolocationResult = {
   error: string | null
   loading: boolean
 }
-
-const DEFAULT_ERROR =
-  'Location unavailable. Enable GPS or move to an open area on deck.'
 
 function getUnsupportedError(): string | null {
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -59,14 +57,14 @@ export function useGeolocation(enabled = true): UseGeolocationResult {
       },
       (geoError) => {
         if (!hasFixRef.current) {
-          setError(geoError.message || DEFAULT_ERROR)
+          setError(formatGeolocationError(geoError.message))
           setResolved(true)
         }
       },
       {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 20_000,
+        enableHighAccuracy: false,
+        maximumAge: 120_000,
+        timeout: 45_000,
       },
     )
 

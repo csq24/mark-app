@@ -10,7 +10,7 @@ export function AppLayout() {
     <div className="min-h-dvh bg-mark-950">
       <Sidebar />
 
-      <div className="flex min-h-dvh flex-col lg:pl-64">
+      <div className="flex h-dvh min-h-0 flex-col lg:pl-64">
         <header className="flex items-center gap-3 border-b border-mark-700 bg-mark-950 px-4 py-3 lg:hidden">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-mark-blue text-mark-950">
             <Fish className="h-5 w-5" strokeWidth={2.25} aria-hidden />
