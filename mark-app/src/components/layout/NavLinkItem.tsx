@@ -17,13 +17,13 @@ export function NavLinkItem({ item, layout }: NavLinkItemProps) {
       aria-label={item.label}
       className={({ isActive }) =>
         [
-          'group flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 font-semibold transition-colors',
+          'group flex min-w-0 flex-1 flex-col items-center justify-center font-semibold transition-colors',
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mark-blue',
           isBottom
             ? isProminent
-              ? 'min-w-0 flex-1 -mt-2 rounded-2xl px-0.5 py-2'
-              : 'min-w-0 flex-1 rounded-xl px-0.5 py-2'
-            : 'w-full gap-3 rounded-xl px-4 py-3.5 text-left md:flex-row md:items-center',
+              ? 'min-w-0 max-w-[4.5rem] flex-none -mt-3 rounded-2xl px-1 py-2 sm:max-w-[5rem] lg:-mt-3.5 lg:px-1.5 lg:py-2.5'
+              : 'min-w-0 flex-1 rounded-xl px-0.5 py-2 lg:py-2.5'
+            : 'w-full gap-2 rounded-lg px-3 py-2 text-left',
           isProminent
             ? isActive
               ? 'bg-mark-blue text-mark-950 shadow-lg shadow-mark-blue/25'
@@ -45,9 +45,9 @@ export function NavLinkItem({ item, layout }: NavLinkItemProps) {
               'shrink-0',
               isBottom
                 ? isProminent
-                  ? 'h-8 w-8'
-                  : 'h-6 w-6'
-                : 'h-6 w-6',
+                  ? 'h-7 w-7 sm:h-8 sm:w-8'
+                  : 'h-5 w-5 sm:h-6 sm:w-6'
+                : 'h-5 w-5',
               isActive && !isProminent ? 'stroke-[2.5]' : 'stroke-2',
             ].join(' ')}
             aria-hidden
@@ -55,7 +55,11 @@ export function NavLinkItem({ item, layout }: NavLinkItemProps) {
           <span
             className={[
               'leading-tight',
-              isBottom ? (isProminent ? 'text-xs' : 'text-[10px]') : 'text-base',
+              isBottom
+                ? isProminent
+                  ? 'text-[10px] sm:text-xs'
+                  : 'text-[9px] sm:text-[10px] lg:text-xs'
+                : 'text-sm',
             ].join(' ')}
           >
             {isBottom ? item.shortLabel : item.label}
